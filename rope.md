@@ -57,5 +57,6 @@ $$k_n=f_k(x_k, n)$$
 
 Turns out that rotation is the answer to this problem. But to be honest it feels like they intuitively found rotation, checked it works, and then thought about the question. Cause the question has this theoritical tick to it, that makes me go "wait what do they ask for?". While rotation is a direct response to seemingly random distribution of subsequent position vectors we saw for absolute embeddings. But that's just a tangent.
 
+I think I get it now. The most important part is: $f_{/{k, q/}}$ means that it applies to both functions $f_{k}$ and $f_{q}$. Also please take a look at section 3.4 in the original paper: https://arxiv.org/pdf/2104.09864, everything will be so much clearer, than with any youtube video on the topic. Trust me please. 
 
 
