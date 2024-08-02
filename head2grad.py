@@ -1,16 +1,12 @@
+import math
 from visualizer import draw_dot
-
-GRAD_ACC_OP = {
-    "+": 0,
-    "-": 0,
-    "*": 1
-}
 
 
 class Value:
     def __init__(self, data, _children=(), _op='', label=""):
         self.data = data
         self.grad = 0 
+        self._backward = lambda: None
         self._prev = set(_children)
         self._op = _op
         self.label = label
@@ -20,34 +16,51 @@ class Value:
 
     def __add__(self, other):
         out = Value(self.data + other.data, (self, other), '+')
+
+        def _backward():
+            self.grad = 1.0 * out.grad
+            other.grad = 1.0 * out.grad
+        out._backward = _backward
+
         return out
 
     def __sub__(self, other):
         out = Value(self.data - other.data, (self, other), '-')
+
+        def _backward():
+            self.grad = -1.0 * out.grad
+            other.grad = -1.0 * out.grad
+        out._backward = _backward
+
         return out
 
     def __mul__(self, other):
         out = Value(self.data * other.data, (self, other), '*')
-        return out
 
-    def _backward(self):
-        print(self)
-        grad_acc_op = GRAD_ACC_OP[self._op]
-        for child1 in self._prev:
-            grad_acc = 0
-            for child2 in self._prev:
-                if child1 != child2:
-                    grad_acc += child2.data * grad_acc_op
-            if grad_acc == 0:
-                child1.grad = self.grad
-            else:
-                child1.grad = self.grad * grad_acc
-            if len(child1._prev) > 0:
-                child1._backward()
+        def _backward():
+            self.grad = other.data * out.grad
+            other.grad = self.data * out.grad
+        out._backward = _backward
+
+        return out
+    
+    def tanh(self):
+        x = self.data
+        tanh = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
+        out = Value(tanh, [self], "tanh")
+
+        def _backward():
+            self.grad = (1  - tanh**2) * out.grad
+        out._backward = _backward
+
+        return out
 
     def backward(self):
         self.grad = 1
         self._backward()
+        for child in self._prev:
+            child._backward()
+        
 
 if __name__ == "__main__":
     v1 = Value(1)
