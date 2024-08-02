@@ -1,4 +1,5 @@
 import math
+import random
 from visualizer import draw_dot
 
 
@@ -111,7 +112,40 @@ class Value:
         self.grad = 1.0
         for node in reversed(topo):
             node._backward()
+
+
+# a single neuron (node) in a layer on neurons
+class Neuron:
+    def __init__(self, n):
+        self.w = [Value(random.uniform(-1, 1)) for _ in range(n)]
+        self.b = Value(random.uniform(-1, 1))
+
+    def __call__(self, x):
+        activation = sum([xi*wi for wi, xi in zip(self.w, x)], self.b) # second parameter acts as a starting acc value
+        out = activation.tanh()
+        return out
     
+
+# list of neurons (nodes), making up a MLP layer
+class Layer:
+    def __init__(self, nin, nout):
+        self.neurons = [Neuron(nin) for _ in range(nout)]
+        
+    def __call__(self, x):
+        outs = [neuron(x) for neuron in self.neurons]
+        return outs
+
+
+class MLP:
+    # ok, i actually love this signature, its brilliant
+    def __init__(self, nin, nouts):
+        sizes = [nin] + nouts
+        self.layers = [Layer(sizes[i], sizes[i+1]) for i in range(len(nouts))]
+
+    def __call__(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 # i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
 # UPDATE: its wrong
