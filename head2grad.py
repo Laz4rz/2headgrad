@@ -2,6 +2,8 @@ import math
 import random
 from visualizer import draw_dot
 
+random.seed(42)
+
 
 class Value:
     def __init__(self, data, _children=(), _op='', label=""):
@@ -79,7 +81,10 @@ class Value:
     
     def tanh(self):
         x = self.data
-        val = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
+        # val = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
+        # rounds to 1 or -1 on limits, avoiding overflow
+        # was problematic in higher LRs
+        val = math.tanh(x) 
         out = Value(val, [self], "tanh")
 
         def _backward():
@@ -108,10 +113,14 @@ class Value:
                     build_topo(child)
                 topo.append(v)
         build_topo(self)
-        
+
+        rev_topo = reversed(topo)
+        self.rev_topo = rev_topo 
+
         self.grad = 1.0
-        for node in reversed(topo):
+        for node in rev_topo:
             node._backward()
+
 
 
 # a single neuron (node) in a layer on neurons
@@ -125,15 +134,33 @@ class Neuron:
         out = activation.tanh()
         return out
     
+    # concatenated list of all Values in neuron
+    def parameters(self):
+        return self.w + [self.b]
+    
 
 # list of neurons (nodes), making up a MLP layer
 class Layer:
     def __init__(self, nin, nout):
+        self.nin = nin
+        self.nout = nout
         self.neurons = [Neuron(nin) for _ in range(nout)]
         
     def __call__(self, x):
         outs = [neuron(x) for neuron in self.neurons]
-        return outs
+        return outs[0] if len(outs) == 1 else outs
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def __str__(self):
+        return f"LinearLayer({self.nin}, {self.nout})"
+    
+    def parameters(self):
+        # ok i hated the double comprehensions, but when you read PEP 202
+        # it all makes perfect sense
+        # PEP 202: "The form [... for x... for y...] nests, with the last index varying fastest, just like nested for loops." is "the Right One."
+        return [p for neuron in self.neurons for p in neuron.parameters()]
 
 
 class MLP:
@@ -146,6 +173,17 @@ class MLP:
         for layer in self.layers:
             x = layer(x)
         return x
+
+    def __repr__(self):
+        return "\n".join([str(layer) for layer in self.layers])
+    
+    def parameters(self):
+        return [p for layer in self.layers for p in layer.parameters()]
+    
+    def step(self, gamma=0.001):
+        for p in self.parameters():
+            p.data -= gamma * p.grad
+
 
 # i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
 # UPDATE: its wrong
