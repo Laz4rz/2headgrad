@@ -180,9 +180,14 @@ class MLP:
     def parameters(self):
         return [p for layer in self.layers for p in layer.parameters()]
     
+    # we'd put this in the optimizer, but we dont have an optimizer so...
     def step(self, gamma=0.001):
         for p in self.parameters():
             p.data -= gamma * p.grad
+
+    def zero_grad(self):
+        for p in self.parameters():
+            p.grad = 0 
 
 
 # i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
