@@ -57,9 +57,20 @@ class Value:
 
     def backward(self):
         self.grad = 1
-        self._backward()
-        for child in self._prev:
-            child._backward()
+        topological = build_topological(self)
+        for value in topological:
+            value._backward()
+    
+
+# i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
+def build_topological(val, topological=[]):
+    if val._prev is None:
+        topological.append(val)
+    else:
+        for child in val._prev:
+            build_topological(child, topological)
+        topological.append(val)        
+        return reversed(topological)
         
 
 if __name__ == "__main__":
