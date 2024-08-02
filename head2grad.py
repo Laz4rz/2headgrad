@@ -56,13 +56,23 @@ class Value:
         return out
 
     def backward(self):
-        self.grad = 1
-        topological = build_topological(self, [])
-        for value in topological:
-            value._backward()
+        topo = []
+        visited = set()
+        def build_topo(v):
+            if v not in visited:
+                visited.add(v)
+                for child in v._prev:
+                    build_topo(child)
+                topo.append(v)
+        build_topo(self)
+        
+        self.grad = 1.0
+        for node in reversed(topo):
+            node._backward()
     
 
 # i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
+# UPDATE: its wrong
 def build_topological(val, topological):
     if val._prev is None:
         topological.append(val)
