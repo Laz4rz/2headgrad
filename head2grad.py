@@ -18,8 +18,8 @@ class Value:
         out = Value(self.data + other.data, (self, other), '+')
 
         def _backward():
-            self.grad = 1.0 * out.grad
-            other.grad = 1.0 * out.grad
+            self.grad += 1.0 * out.grad
+            other.grad += 1.0 * out.grad
         out._backward = _backward
 
         return out
@@ -28,8 +28,8 @@ class Value:
         out = Value(self.data - other.data, (self, other), '-')
 
         def _backward():
-            self.grad = -1.0 * out.grad
-            other.grad = -1.0 * out.grad
+            self.grad += -1.0 * out.grad
+            other.grad += -1.0 * out.grad
         out._backward = _backward
 
         return out
@@ -38,8 +38,8 @@ class Value:
         out = Value(self.data * other.data, (self, other), '*')
 
         def _backward():
-            self.grad = other.data * out.grad
-            other.grad = self.data * out.grad
+            self.grad += other.data * out.grad
+            other.grad += self.data * out.grad
         out._backward = _backward
 
         return out
@@ -57,20 +57,20 @@ class Value:
 
     def backward(self):
         self.grad = 1
-        topological = build_topological(self)
+        topological = build_topological(self, [])
         for value in topological:
             value._backward()
     
 
 # i guess this is correct? and I like it cause I wrote it? **i GUESS correct**
-def build_topological(val, topological=[]):
+def build_topological(val, topological):
     if val._prev is None:
         topological.append(val)
     else:
         for child in val._prev:
             build_topological(child, topological)
         topological.append(val)        
-        return reversed(topological)
+        return list(reversed(topological))
         
 
 if __name__ == "__main__":
