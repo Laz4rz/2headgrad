@@ -57,7 +57,8 @@ The whole network (with characters as vocabulary) can be brought down to:
 
 ```python
 # lets say batch size is 32, 3 characters per example
-x = [[1, 22, 10], ...] # [32, 3]
+x = [[1, 22, 10], ...]      # [32, 3]
+y = [5, 2...]               # [32,  ]
 
 # linear layer embedding each character into 2 dimensional space
 embeddings = torch.randn((27, 2))
@@ -87,7 +88,27 @@ x = x @ w2 + b2             # [32, 27]
 # next token from 
 # sum across dim=1 to get per batch element sum
 # keepdim=True so broadcasting can work 
-x = x.exp() / x.exp().sum(dim=1, keepdim=True) 
+probabilities = x.exp() / x.exp().sum(dim=1, keepdim=True)
+
+
+## long way to loss
+# select probabilities for target token for each batch element
+probabilities_per_target = probabilities[torch.arange(32), y]
+
+# make it negative log likelihood, so can be used as a loss
+neg_log_likelihood_loss = -1 * probabilities.log().mean()
+
+## short way to loss
+# use cross_entropy straight up 
+loss = F.cross_entropy(x, y)
 ```
+
+A good way of finding optimal learning rate is to look for upper and lower bound where loss explodes. These will serve as bounds between which we expect to find optimal learning rate. 
+
+Now is the sick part. We can run a single training, changing the learning rate with each step, and choose the optimal learning rate based on the local minimum of learning rate losses. (Not sure why this work intuitively)
+
+![alt text](images/learningratesinglerun.png)
+
+
 
 
