@@ -43,4 +43,51 @@ $$\frac{\partial f(x, y)}{\partial x}  \approx \frac{f(x+h, y) - f(x,y)}{h}$$
 
 This fancy thing in the beginning is just a way of saying that we take a derivative for only one of function's variables.
 
+## Papers
+
+### Bengio et al. 2003 — MLP model 
+
+Bengio and the boys used embeddings (dimensions 30, 60, and 100 in the experiments), and a vocabulary of tokens of much bigger size (ie. 17000, used words as tokens), concatenated all of the embedded words, and put them through big MLP layer. Finishing with cross-entropy loss to predict the word following the ones that were feeded. 
+
+![alt text](images/bengio.png)
+
+I swear to god, the base requirement to publish novel science is doing the worst diagrams ever. Tbh I'd have no idea how to implement this. What are the dashed lines? I thought these are skip connections? Residuals? But no, apparently not. I still don't know what they are. 
+
+The whole network (with characters as vocabulary) can be brought down to:
+
+```python
+# lets say batch size is 32, 3 characters per example
+x = [[1, 22, 10], ...] # [32, 3]
+
+# linear layer embedding each character into 2 dimensional space
+embeddings = torch.randn((27, 2))
+
+x = embeddings[x]           # [32, 3, 2]
+
+# linear layer (+ biases) projecting from 6 to 100
+# 6 comes from the fact that each example is of length 3
+# so 3 characters embedded in 2 dims gives [3, 2] vector
+w1 = torch.randn((6, 100))
+b1 = torch.randn(100)
+
+x = x.view(-1, 6)           # [32, 6]
+x = x @ w1 + b1             # [32, 100]
+
+# tanh from the middle of the diagram
+x = torch.tanh(x)
+
+# final projection, downsizing output to vocabulary size
+w2 = torch.randn(100, 27)
+b2 = torch.randn(27)
+
+x = x @ w2 + b2             # [32, 27]
+
+# softmax to get probabilities per vocab element from logits
+# here we get a distirbution over vocab that we can sample
+# next token from 
+# sum across dim=1 to get per batch element sum
+# keepdim=True so broadcasting can work 
+x = x.exp() / x.exp().sum(dim=1, keepdim=True) 
+```
+
 
