@@ -88,7 +88,7 @@ class Value:
         out = Value(val, [self], "tanh")
 
         def _backward():
-            self.grad = (1  - val**2) * out.grad # 1 - tanh(x)^2
+            self.grad += (1  - val**2) * out.grad # 1 - tanh(x)^2
         out._backward = _backward
 
         return out
@@ -200,7 +200,7 @@ def build_topological(val, topological):
             build_topological(child, topological)
         topological.append(val)        
         return list(reversed(topological))
-        
+
 
 if __name__ == "__main__":
     v1 = Value(1)
