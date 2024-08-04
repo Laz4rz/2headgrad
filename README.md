@@ -109,6 +109,64 @@ Now is the sick part. We can run a single training, changing the learning rate w
 
 ![alt text](images/learningratesinglerun.png)
 
+## Misc
 
+### Initialization
 
+Whenever we initialize a neural network, we can get a rough idea of the initial loss that we should observe. In case on NLP models, we base it on the size of vocabulary and loss function used. 
 
+Let's say we use a vocabulary of size $|v|=27$. Remember that we finish with a distribution over the elements of this vocabulary, and we can assume that we should start with a uniform distribution — after all we have no idea which character/token has what probability. If we do that then each token would have probability of $\frac{1}{27}$. Then the negative log likelihood (cross-entropy) is $-\log\frac{1}{27}=3.2958$.
+
+So we may think "hey, let's just set everything to zero, this way everything is uniform and there is no bias". But turns out this is not the greatest approach. Why?
+
+- Every neuron would react the same way to the input and would produce the same gradient, leading to learning the same features, instead of capturing different ones, as we would hope they will. 
+
+- If we choose the convention of ReLU thath sets the gradient for values equal zero to $0$. We would not get any gradient flow through it, as the gradient flow multiplcation would be `0 * out.grad = 0 `. 
+
+- There is more situations like this, imagine that you pass only limit examples to $\tanh$, that results in it producing mainly $-1$ and $1$. Remember the gradient of $\tanh$? It is $(\tanh x)' = 1 - \tanh^2 x$, so if our weights are all zero, then inputs result in zeros being passed around the network, and gradient being squashed to $0$ as well. 
+
+#### Kaiming initialization
+
+Turns out if we aim to preseerve the variance of the activations, keeping the distribution tight, we get optimal initialization. Yeah, I don't like how this sounds either, cause I am a little unsure of why this helps. I see why this would work for normally distributed data, but not really in general. 
+
+Kaiming init scales weights, dividing linear layer weight distributions, by $\frac{gain}{\sqrt in}$, which results in variance being kept unscaled between layers. More detail: https://pytorch.org/docs/stable/nn.init.html#torch.nn.init.kaiming_normal_
+
+Gain is important, cause the combination of keeping variance in check and squashing functions like tanh or sigmoid drive the variance down in fact. So we need gain that corresponds to the function it follows so that the variance does not shrink.
+
+#### Batch normalization
+
+So Kaiming helped us keep the variance of the activations in check. But are there other methods? Could we just normalize the activations? We would force the variance (and/or mean) to be well behaved. I mean, normalizing is done with basic differentiable operations, so their combination is also differentiable... 
+
+```python
+x = (x - x.mean(0)) / x.std(0)
+```
+
+What happens if we just normalize the batch at each training step? Turns out it is not great, cause we only want this HARD normalization at model initialization. Later we are not sure what's best, maybe difusing the distribution or moving it around would be helpful? We have to give the model some wiggle room with this. 
+
+```python
+# we initialize the wiggle room so that it starts as identity
+bngain = torch.ones(x.shape[1])
+bnbias = torch.zeros(x.shape[1])
+
+# we scale for each feature batch distribution -> dim=0
+# keepdim=True to allow broadcasting
+x = bngain * (x - x.mean(0, keepdim=True)) / x.std(0, keepdim=True) + bnbias
+```
+
+Noice... But wait! Notice that we just coupled our training batch size with model. That's not good. We would have to pass this batch size forever. And we may want to infer different size. 
+
+The approach proposed in the paper is to take a mean and std of entire training set, and use it for inference on single examples. This could be done, by either calculating it on the whole set, or by a running mean. 
+
+Other approach to decouple the model from the batch size is to use Layer Norm. Instead of looking for batch distribution per feature, we do that per batch element. 
+
+```python
+# we initialize the wiggle room so that it starts as identity
+# looks weird to choose the feature dim shape, but we decouple
+bngain = torch.ones(x.shape[1])
+bnbias = torch.zeros(x.shape[1])
+
+# we scale for each batch element distribution -> dim=1
+x = bngain * (x - x.mean(1, keepdim=True)) / x.std(1, keepdim=True) + bnbias
+```
+
+Tip of the day: when using batch norm, it doesn't make sense to use biases in previous layer. It will get subtracted. 
