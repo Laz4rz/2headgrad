@@ -123,7 +123,68 @@ So we may think "hey, let's just set everything to zero, this way everything is 
 
 - If we choose the convention of ReLU thath sets the gradient for values equal zero to $0$. We would not get any gradient flow through it, as the gradient flow multiplcation would be `0 * out.grad = 0 `. 
 
-- There is more situations like this, imagine that you pass only limit examples to $\tanh$, that results in it producing mainly $-1$ and $1$. Remember the gradient of $\tanh$? It is $(\tanh x)' = 1 - \tanh^2 x$, so if our weights are all zero, then inputs result in zeros being passed around the network, and gradient being squashed to $0$ as well. 
+- There is more situations like this, imagine that you pass only limit examples to $\tanh$, that results in it producing mainly $-1$ and $1$. Remember the gradient of $\tanh$? It is $(\tanh x)' = 1 - \tanh^2 x$, so if we only pass "limit", very high positive or negative values, it will result in the gradients on tanh being 0, and we will basically create a dead neuron.
+
+#### Why does variance grow with linear layers?
+
+**Golden rule:** The variance of a sum of random variables is the sum of their variances. (independent)
+
+We can assume that our input has each value sampled from $N(0, 1)$ (normal distribution with mean 0 and variance 1), and the linear layer that it will pass through, also has values sampled from $N(0, 1)$.
+
+Now look at this example:
+
+$$
+\begin{pmatrix}
+a & b \\
+c & d
+\end{pmatrix}
+\begin{pmatrix}
+x \\
+y
+\end{pmatrix}
+=
+\begin{pmatrix}
+ax + by \\
+cx + dy
+\end{pmatrix}
+$$
+
+What happens to variance:
+
+1. Multiplication of $ax$ and $by$
+
+Let's say $X=a$, $Y=x$.
+
+$$\text{Var}(XY) = \mathbb{E}[X]^2 \text{Var}(Y) + \mathbb{E}[Y]^2 \text{Var}(X) + \text{Var}(X) \text{Var}(Y)$$
+
+Since expected values of all $a,x,b,y$ are all 0. Then it simplifies to:
+
+$$\text{Var}(XY) = 0 \cdot \text{Var}(Y) + 0 \cdot \text{Var}(X) + \text{Var}(X) \text{Var}(Y)$$
+
+$$\text{Var}(XY) = 0 + 0 + \text{Var}(X) \text{Var}(Y) = \text{Var}(X) \text{Var}(Y) = 1 \cdot 1 =1 $$
+
+So we don't care about how variance changes with multiplication. In this case variance stays the same for the product of them as for each of them alone. 
+
+1. Additions 
+
+Again, let's $X=ax$, $Y=by$.
+
+$$\text{Var}(XY) = \text{Var}(X) + \text{Var}(Y)$$
+
+So when we plug the variance of our variables:
+
+$$\text{Var}(XY) = 1 + 1 = 2$$
+
+And when you think a second, you see that the more inputs the linear layer (matrix) has, the more additions you do (number of additions equals the first dimension of a linear layer). 
+
+Intuitively: when you matmul your inputs with a linear layer, each new value undergoes multiplications and additions. For simplicity we assume mean 0 (it's an ok approximation), which is why multiplications don't impact variance. But additions scale the variance of each of the output values, by the number of additions. 
+
+That is why below we either: a). scale initialization so that additions build up to give us variance 1, b). normalize the variance that went to the moon, so it's $1$ again.
+
+
+
+
+
 
 #### Kaiming initialization
 
