@@ -231,3 +231,7 @@ x = bngain * (x - x.mean(1, keepdim=True)) / x.std(1, keepdim=True) + bnbias
 ```
 
 Tip of the day: when using batch norm, it doesn't make sense to use biases in previous layer. It will get subtracted. 
+
+
+---
+Disclaimer: Images come from a variety of videos/blogs
