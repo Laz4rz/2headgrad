@@ -141,8 +141,7 @@ c & d
 \begin{pmatrix}
 x \\
 y
-\end{pmatrix}
-=
+\end{pmatrix}=
 \begin{pmatrix}
 ax + by \\
 cx + dy
